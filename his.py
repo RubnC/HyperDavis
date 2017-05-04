@@ -7,41 +7,65 @@ import sys
 from PyQt5.QtCore import QDir, Qt
 from spectral import *
 import matplotlib
-from PyQt5.QtWidgets import QMainWindow, QTextEdit, QAction, QApplication, QFileDialog, QLabel, QMessageBox, QSizePolicy, QScrollArea, QDialog, QApplication, QPushButton, QVBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QTextEdit, QAction, QApplication, QSplitter, QFileDialog, QLabel, QMessageBox, QSizePolicy, QScrollArea, QDialog, QApplication, QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QFrame, QStyleFactory, QGridLayout, QSpacerItem, QDockWidget, QListWidget, QSlider
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QPalette, QImage
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
 
 
-class Example(QMainWindow):
+
+class  MainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
         
         self.initUI()
         
+        #self.wid()
+       
         
-    def initUI(self):               
+    def initUI(self):  
+
+        #layout = QHBoxLayout()
+        self.items = QDockWidget("Images", self)
+        self.listWidget = QListWidget()
+        #self.listWidget.addItem("item1")
+        self.items.setWidget(self.listWidget)
+        self.items.setFloating(False)
+        #self.setCentralWidget(QTextEdit())
+        self.addDockWidget(Qt.RightDockWidgetArea, self.items)
         
-        #textEdit = QTextEdit()
-        #self.setCentralWidget(textEdit)
+        self.console = QDockWidget("Output Console", self)
+        self.textConsole = QTextEdit()
+        self.textConsole.setEnabled(False)
+        self.textConsole.setText("#HyperDavis output: ")
+        self.console.setWidget(self.textConsole)
+        self.console.setFloating(False)
+        self.setCentralWidget(QTextEdit())
+        self.addDockWidget(Qt.RightDockWidgetArea, self.console)
+        
 
         exitAction = QAction(QIcon('./icons/exit.png'), 'Exit', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.setStatusTip('Exit application')
         exitAction.triggered.connect(self.close)
 
-        openAction = QAction(QIcon('./icons/open.png'), 'Open', self)
+        openAction = QAction(QIcon('./icons/open.png'), 'Open File', self)
         openAction.setShortcut('Ctrl+O')
         openAction.setStatusTip('Open File')
-        openAction.triggered.connect(self.showDialog)  
+        openAction.triggered.connect(self.load)  
 
-        saveAction = QAction(QIcon('./icons/save.png'), 'Save', self)
-        saveAction.setShortcut('Ctrl+S')
-        saveAction.setStatusTip('Save')
-        saveAction.triggered.connect(self.save)  
-        saveAction.setEnabled(True)
+        self.RGBAction = QAction(QIcon('./icons/rgb.png'), 'RGB Bands', self)
+        self.RGBAction.setShortcut('Ctrl+R')
+        self.RGBAction.setStatusTip('RGB Bands')
+        self.RGBAction.triggered.connect(self.RGB) 
+        self.RGBAction.setEnabled(False)
+        #saveAction = QAction(QIcon('./icons/save.png'), 'Save', self)
+        #saveAction.setShortcut('Ctrl+S')
+        #saveAction.setStatusTip('Save')
+        #saveAction.triggered.connect(self.save)  
+        #saveAction.setEnabled(True)
      
 
         newAction = QAction(QIcon('./icons/new.png'), 'New', self)
@@ -104,7 +128,7 @@ class Example(QMainWindow):
         self.aboutAction.setStatusTip('About')
         
 
-        self.saveAction = QAction('Save', self)
+        #self.saveAction = QAction('Save', self)
         
         
         self.statusBar()
@@ -117,7 +141,7 @@ class Example(QMainWindow):
         fileMenu.addAction(newAction)
         fileMenu.addAction(openAction)
         fileMenu.addAction('Open Recent')
-        fileMenu.addAction(self.saveAction)
+        #fileMenu.addAction(self.saveAction)
         fileMenu.addAction('Save as...')
         fileMenu.addAction('Export as PDF')
         fileMenu.addSeparator()
@@ -135,7 +159,7 @@ class Example(QMainWindow):
         #viewMenu.addAction(fitwindowAction)
 
         toolsMenu = menubar.addMenu('Tools')
-        toolsMenu.addAction('Wavelength')
+        toolsMenu.addAction(self.RGBAction)
         toolsMenu.addAction('Filter')
         windowMenu = menubar.addMenu('Window')
         action5 = windowMenu.addAction('Charts')
@@ -150,12 +174,13 @@ class Example(QMainWindow):
 
         toolbar.addAction(newAction)
         toolbar.addAction(openAction)
-        toolbar.addAction(saveAction)
+        
         toolbar1 = self.addToolBar('Tools')
         toolbar1.addAction(self.zoominAction)
         toolbar1.addAction(self.normAction)
         toolbar1.addAction(self.zoomoutAction)
         toolbar1.addAction(self.cursorAction)
+        toolbar1.addAction(self.RGBAction)
         toolbar1.addAction(self.polylineAction)
         toolbar1.addAction(self.gridAction)
         toolbar1.addAction(self.filterinAction)
@@ -179,7 +204,7 @@ class Example(QMainWindow):
         #self.resize(pixmap.width(),pixmap.height())
         self.show()
 
-    def showDialog(self):
+    def load(self):
         #fileName, _ = QFileDialog.getOpenFileName(self,"Open Files", '/desktop',"Images (*.*)")
         #options = QFileDialog.Options()
         #options |= QFileDialog.DontUseNativeDialog
@@ -198,15 +223,18 @@ class Example(QMainWindow):
         #print (colors)
         fileName, _ = QFileDialog.getOpenFileName(self, "Open File", QDir.currentPath())
         img = open_image(fileName)  
-        view = imshow(img, (29, 19, 9), title=fileName)
-        view.show()
-        # set the layout
+        #print (img.shape)
+        #view = imshow(img, (29, 19, 9), title=fileName)
+        #view.show()
+        
+        text="#The image " + fileName + " has been loaded."
+        self.textConsole.append(text)
+        datos=str(img)
+        self.textConsole.append(datos)
+        self.listWidget.addItem(fileName)
+        self.RGBAction.setEnabled(True)
 
-        #BsqFile
-        #view_cube(img, bands=[29, 19, 9])
-        print (fileName)
         print (img)
-
 
         #view_cube(img, bands=[29, 19, 9])
         #if fileName:
@@ -252,14 +280,86 @@ class Example(QMainWindow):
     #
     #    self.updateActions()
 
-    #Guardar en RGB
-    def save(self):
-        save_rgb('rgb.jpg', img, [29, 19, 9])
+    def RGB(self):     
+
+       self.dialog = RGBwindow(self)
+       #self.dialog.show()
+        
+        
+class RGBwindow(QMainWindow):
+    def __init__(self, parent=None):
+        super(RGBwindow, self).__init__(parent)
+
+        self.RGBUI()
+
+    def RGBUI(self):
+        #self.btn = QPushButton('Dialog', self)
+        #self.btn.move(20, 20)
+        #self.btn.clicked.connect(self.showDialog)
+        
+        #self.le = QLineEdit(self)
+        #self.le.move(130, 22)
+
+        lbl1 = QLabel("Red:",self)
+        lbl1.move(20, 20)
+        lbl2 = QLabel("Green:",self)
+        lbl2.move(20, 40)
+        lbl3 = QLabel("Blue:",self)
+        lbl3.move(20, 60)
+
+        self.sld = QSlider(Qt.Horizontal, self)
+        self.sld.setFocusPolicy(Qt.NoFocus)
+        self.sld.setGeometry(120, 20, 230, 30)
+        self.sld.setMinimum(0)
+        self.sld.setMaximum(200)
+        self.label = QLabel(self)
+        self.sld.valueChanged.connect(self.valuechange)
+        self.label.setGeometry(370, 20, 80, 30)
+
+        self.sld1 = QSlider(Qt.Horizontal, self)
+        self.sld1.setFocusPolicy(Qt.NoFocus)
+        self.sld1.setGeometry(120, 40, 230, 30)
+        self.sld1.setMinimum(0)
+        self.sld1.setMaximum(200)
+        self.label1 = QLabel(self)
+        self.sld1.valueChanged.connect(self.valuechange1)
+        self.label1.setGeometry(370, 40, 80, 30)
+
+        self.sld2 = QSlider(Qt.Horizontal, self)
+        self.sld2.setFocusPolicy(Qt.NoFocus)
+        self.sld2.setGeometry(120, 60, 230, 30)
+        self.sld2.setMinimum(0)
+        self.sld2.setMaximum(200)
+        self.label2 = QLabel(self)
+        self.sld2.valueChanged.connect(self.valuechange2)
+        self.label2.setGeometry(370, 60, 80, 30)
 
 
+        self.btn = QPushButton('Ok', self)
+        self.btn.move(100, 100)
+        self.btn1 = QPushButton('Cancel', self)
+        self.btn1.move(200, 100)
+        self.btn1.clicked.connect(self.close)
+        self.adjustSize()
+        
+        #self.le.adjustSize()
+        self.setWindowTitle('Bands Selector')
+        self.show()
+
+    def valuechange(self):
+      size = self.sld.value()
+      self.label.setText(str(size))
+
+    def valuechange1(self):
+      size = self.sld1.value()
+      self.label1.setText(str(size))
+
+    def valuechange2(self):
+      size = self.sld2.value()
+      self.label2.setText(str(size))
         
 if __name__ == '__main__':
     
     app = QApplication(sys.argv)
-    ex = Example()
+    ex = MainWindow()
     sys.exit(app.exec_())
