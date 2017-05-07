@@ -4,15 +4,17 @@
 
 
 import sys
+from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QDir, Qt
 from spectral import *
 import matplotlib
-from PyQt5.QtWidgets import QMainWindow, QTextEdit, QAction, QApplication, QSplitter, QFileDialog, QLabel, QMessageBox, QSizePolicy, QScrollArea, QDialog, QApplication, QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QFrame, QStyleFactory, QGridLayout, QSpacerItem, QDockWidget, QListWidget, QSlider
+from PyQt5.QtWidgets import QMainWindow, QTextEdit, QAction, QApplication, QSplitter, QFileDialog, QLabel, QMessageBox, QSizePolicy, QScrollArea, QDialog, QApplication, QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QFrame, QStyleFactory, QGridLayout, QSpacerItem, QDockWidget, QListWidget, QSlider, QCheckBox
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QPalette, QImage
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
 
+global img, nbands, label
 
 
 class  MainWindow(QMainWindow):
@@ -27,6 +29,7 @@ class  MainWindow(QMainWindow):
         
     def initUI(self):  
 
+        global label
         #layout = QHBoxLayout()
         self.items = QDockWidget("Images", self)
         self.listWidget = QListWidget()
@@ -35,6 +38,11 @@ class  MainWindow(QMainWindow):
         self.items.setFloating(False)
         #self.setCentralWidget(QTextEdit())
         self.addDockWidget(Qt.RightDockWidgetArea, self.items)
+        #self.listWidget.itemSelectionChanged.triggered.connect(print("nuevo"))
+        label = QLabel(self)
+        self.setCentralWidget(label)
+
+
         
         self.console = QDockWidget("Output Console", self)
         self.textConsole = QTextEdit()
@@ -42,7 +50,7 @@ class  MainWindow(QMainWindow):
         self.textConsole.setText("#HyperDavis output: ")
         self.console.setWidget(self.textConsole)
         self.console.setFloating(False)
-        self.setCentralWidget(QTextEdit())
+        #self.setCentralWidget(QTextEdit())
         self.addDockWidget(Qt.RightDockWidgetArea, self.console)
         
 
@@ -56,11 +64,11 @@ class  MainWindow(QMainWindow):
         openAction.setStatusTip('Open File')
         openAction.triggered.connect(self.load)  
 
-        self.RGBAction = QAction(QIcon('./icons/rgb.png'), 'RGB Bands', self)
-        self.RGBAction.setShortcut('Ctrl+R')
-        self.RGBAction.setStatusTip('RGB Bands')
-        self.RGBAction.triggered.connect(self.RGB) 
-        self.RGBAction.setEnabled(False)
+        self.FAKEcolorAction = QAction(QIcon('./icons/rgb.png'), 'FAKE color Bands', self)
+        self.FAKEcolorAction.setShortcut('Ctrl+R')
+        self.FAKEcolorAction.setStatusTip('FAKE color Bands')
+        self.FAKEcolorAction.triggered.connect(self.FAKE) 
+        self.FAKEcolorAction.setEnabled(False)
         #saveAction = QAction(QIcon('./icons/save.png'), 'Save', self)
         #saveAction.setShortcut('Ctrl+S')
         #saveAction.setStatusTip('Save')
@@ -75,6 +83,7 @@ class  MainWindow(QMainWindow):
         self.zoominAction = QAction(QIcon('./icons/zoomin.png'), 'Zoom in',  self)
         self.zoominAction.setShortcut('Ctrl++')
         self.zoominAction.setStatusTip('Zoom in')
+        self.zoominAction.triggered.connect(self.zoomin) 
         self.zoominAction.setEnabled(False)
  
 
@@ -159,7 +168,7 @@ class  MainWindow(QMainWindow):
         #viewMenu.addAction(fitwindowAction)
 
         toolsMenu = menubar.addMenu('Tools')
-        toolsMenu.addAction(self.RGBAction)
+        toolsMenu.addAction(self.FAKEcolorAction)
         toolsMenu.addAction('Filter')
         windowMenu = menubar.addMenu('Window')
         action5 = windowMenu.addAction('Charts')
@@ -180,7 +189,7 @@ class  MainWindow(QMainWindow):
         toolbar1.addAction(self.normAction)
         toolbar1.addAction(self.zoomoutAction)
         toolbar1.addAction(self.cursorAction)
-        toolbar1.addAction(self.RGBAction)
+        toolbar1.addAction(self.FAKEcolorAction)
         toolbar1.addAction(self.polylineAction)
         toolbar1.addAction(self.gridAction)
         toolbar1.addAction(self.filterinAction)
@@ -205,6 +214,8 @@ class  MainWindow(QMainWindow):
         self.show()
 
     def load(self):
+
+
         #fileName, _ = QFileDialog.getOpenFileName(self,"Open Files", '/desktop',"Images (*.*)")
         #options = QFileDialog.Options()
         #options |= QFileDialog.DontUseNativeDialog
@@ -221,8 +232,54 @@ class  MainWindow(QMainWindow):
         #QColor(c).setRgb(255, 49, 3)
         #colors = QColor(c).getRgbF()
         #print (colors)
+        global img, nbands, label
         fileName, _ = QFileDialog.getOpenFileName(self, "Open File", QDir.currentPath())
         img = open_image(fileName)  
+        #nbands = img.shape
+        nbands = len(img[1, 1])
+        #print (nbands)
+        #print(img.read_band(0))
+        #print (len(img.read_band(0)))
+        #imshow(img.read_band(0), title="image1", cmap='gray')
+
+        rgb = get_rgb(img.read_band(0))
+        rgb2 = rgb*255
+        #print (rgb)
+        #print (len(rgb))
+        #print (rgb2)
+        #print (rgb2[0][0][0])
+
+        image = QtGui.QImage(len(rgb), len(rgb), 5)
+
+        for x in range(len(rgb2)):
+            for y in range(len(rgb2)):
+                onColor = QtGui.qRgb(rgb2[y][x][0], rgb2[y][x][0], rgb2[y][x][0])
+                image.setPixel(x, y, onColor)
+
+        #image.scaled(290, 290, Qt.KeepAspectRatio)
+        pp = QtGui.QPixmap.fromImage(image)
+        self.lbl = label
+        self.lbl.setPixmap(pp)
+
+        
+        self.lbl.show()
+        self.zoominAction.setEnabled(True)
+        self.zoomoutAction.setEnabled(True)
+        self.normAction.setEnabled(True)
+        #pixmap = QPixmap("join.png")
+        #img = pixmap.toImage()
+        #self.label=label.setPixmap(pixmap)
+
+    
+
+
+
+
+
+
+
+        #view_indexed(img.read_band(0))
+
         #print (img.shape)
         #view = imshow(img, (29, 19, 9), title=fileName)
         #view.show()
@@ -232,7 +289,11 @@ class  MainWindow(QMainWindow):
         datos=str(img)
         self.textConsole.append(datos)
         self.listWidget.addItem(fileName)
-        self.RGBAction.setEnabled(True)
+        self.FAKEcolorAction.setEnabled(True)
+        
+
+        
+
 
         print (img)
 
@@ -280,39 +341,53 @@ class  MainWindow(QMainWindow):
     #
     #    self.updateActions()
 
-    def RGB(self):     
 
-       self.dialog = RGBwindow(self)
+
+    def FAKE(self):     
+
+       self.dialog = FAKEcolorWindow(self)
        #self.dialog.show()
+    def zoomin(self):
+        print("holiiiii")
         
         
-class RGBwindow(QMainWindow):
+class FAKEcolorWindow(QMainWindow):
     def __init__(self, parent=None):
-        super(RGBwindow, self).__init__(parent)
+        super(FAKEcolorWindow, self).__init__(parent)
 
-        self.RGBUI()
+        self.FAKEcolorUI()
 
-    def RGBUI(self):
+    def FAKEcolorUI(self):
         #self.btn = QPushButton('Dialog', self)
         #self.btn.move(20, 20)
         #self.btn.clicked.connect(self.showDialog)
         
         #self.le = QLineEdit(self)
         #self.le.move(130, 22)
+        global nbands
+        self.nbands = nbands-1
 
-        lbl1 = QLabel("Red:",self)
-        lbl1.move(20, 20)
-        lbl2 = QLabel("Green:",self)
-        lbl2.move(20, 40)
-        lbl3 = QLabel("Blue:",self)
-        lbl3.move(20, 60)
+        cb = QCheckBox('Red', self)
+        cb.move(20, 20)
+        cb.toggle()
+        cb.stateChanged.connect(self.on)
+        cb1 = QCheckBox('Blue', self)
+        cb1.move(20, 40)
+        cb1.toggle()
+        cb1.stateChanged.connect(self.on1)
+        cb2 = QCheckBox('Green', self)
+        cb2.move(20, 60)
+        cb2.toggle()
+        cb2.stateChanged.connect(self.on2)
 
         self.sld = QSlider(Qt.Horizontal, self)
         self.sld.setFocusPolicy(Qt.NoFocus)
         self.sld.setGeometry(120, 20, 230, 30)
         self.sld.setMinimum(0)
-        self.sld.setMaximum(200)
+        self.sld.setMaximum(self.nbands)
+
         self.label = QLabel(self)
+        self.label.setText("0")
         self.sld.valueChanged.connect(self.valuechange)
         self.label.setGeometry(370, 20, 80, 30)
 
@@ -320,8 +395,9 @@ class RGBwindow(QMainWindow):
         self.sld1.setFocusPolicy(Qt.NoFocus)
         self.sld1.setGeometry(120, 40, 230, 30)
         self.sld1.setMinimum(0)
-        self.sld1.setMaximum(200)
+        self.sld1.setMaximum(self.nbands)
         self.label1 = QLabel(self)
+        self.label1.setText("0")
         self.sld1.valueChanged.connect(self.valuechange1)
         self.label1.setGeometry(370, 40, 80, 30)
 
@@ -329,8 +405,9 @@ class RGBwindow(QMainWindow):
         self.sld2.setFocusPolicy(Qt.NoFocus)
         self.sld2.setGeometry(120, 60, 230, 30)
         self.sld2.setMinimum(0)
-        self.sld2.setMaximum(200)
+        self.sld2.setMaximum(self.nbands)
         self.label2 = QLabel(self)
+        self.label2.setText("0")
         self.sld2.valueChanged.connect(self.valuechange2)
         self.label2.setGeometry(370, 60, 80, 30)
 
@@ -340,23 +417,57 @@ class RGBwindow(QMainWindow):
         self.btn1 = QPushButton('Cancel', self)
         self.btn1.move(200, 100)
         self.btn1.clicked.connect(self.close)
-        self.adjustSize()
+        self.btn.clicked.connect(self.FAKEcolor)
+        self.btn.clicked.connect(self.close)
+
         
         #self.le.adjustSize()
-        self.setWindowTitle('Bands Selector')
+        self.setWindowTitle('FAKE color Bands Selector')
+        self.setFixedSize(400, 150)
+        self.setWindowFlags(QtCore.Qt.Window |QtCore.Qt.CustomizeWindowHint |QtCore.Qt.WindowTitleHint |QtCore.Qt.WindowCloseButtonHint |QtCore.Qt.WindowStaysOnTopHint)
         self.show()
 
+    def on(self, state):
+      
+        if state == Qt.Checked:
+            self.sld.setEnabled(True)
+        else:
+            self.sld.setEnabled(False)
+
+    def on1(self, state):
+      
+        if state == Qt.Checked:
+            self.sld1.setEnabled(True)
+        else:
+            self.sld1.setEnabled(False)
+    def on2(self, state):
+      
+        if state == Qt.Checked:
+            self.sld2.setEnabled(True)
+        else:
+            self.sld2.setEnabled(False)
+
     def valuechange(self):
-      size = self.sld.value()
-      self.label.setText(str(size))
+        size = self.sld.value()
+        self.label.setText(str(size))
 
     def valuechange1(self):
-      size = self.sld1.value()
-      self.label1.setText(str(size))
+        size = self.sld1.value()
+        self.label1.setText(str(size))
 
     def valuechange2(self):
-      size = self.sld2.value()
-      self.label2.setText(str(size))
+        size = self.sld2.value()
+        self.label2.setText(str(size))
+    def FAKEcolor(self):
+        print("RGBimage")
+        global img
+        self.img=img
+        imshow(img, (self.sld.value(), self.sld1.value(), self.sld2.value()), title="image1")
+        self.close
+    def itmSelected(self):
+        print ("holiiiiii")
+
+
         
 if __name__ == '__main__':
     
