@@ -8,11 +8,16 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QDir, Qt
 from spectral import *
 import matplotlib
-from PyQt5.QtWidgets import QMainWindow, QTextEdit, QAction, QApplication, QSplitter, QFileDialog, QLabel, QMessageBox, QSizePolicy, QScrollArea, QDialog, QApplication, QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QFrame, QStyleFactory, QGridLayout, QSpacerItem, QDockWidget, QListWidget, QSlider, QCheckBox
+from scipy import misc
+
+from PyQt5.QtWidgets import QMainWindow, QTextEdit, QAction, QApplication, QSplitter, QFileDialog, QLabel, QMessageBox, QSizePolicy, QScrollArea, QDialog, QApplication, QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QFrame, QStyleFactory, QGridLayout, QSpacerItem, QDockWidget, QListWidget, QSlider, QCheckBox, QComboBox, QWidget
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QPalette, QImage
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
+import random
+from matplotlib.figure import Figure
+from matplotlib.colors import LogNorm
 
 global img, nbands, label
 
@@ -30,7 +35,7 @@ class  MainWindow(QMainWindow):
     def initUI(self):  
 
         global label
-        #layout = QHBoxLayout()
+        self.layout = QHBoxLayout()
         self.items = QDockWidget("Images", self)
         self.listWidget = QListWidget()
         #self.listWidget.addItem("item1")
@@ -48,6 +53,7 @@ class  MainWindow(QMainWindow):
         self.textConsole = QTextEdit()
         self.textConsole.setEnabled(False)
         self.textConsole.setText("#HyperDavis output: ")
+        self.textConsole.moveCursor(QtGui.QTextCursor.End)
         self.console.setWidget(self.textConsole)
         self.console.setFloating(False)
         #self.setCentralWidget(QTextEdit())
@@ -64,11 +70,15 @@ class  MainWindow(QMainWindow):
         openAction.setStatusTip('Open File')
         openAction.triggered.connect(self.load)  
 
-        self.FAKEcolorAction = QAction(QIcon('./icons/rgb.png'), 'FAKE color Bands', self)
+        self.FAKEcolorAction = QAction(QIcon('./icons/rgb.png'), 'False color Bands', self)
         self.FAKEcolorAction.setShortcut('Ctrl+R')
-        self.FAKEcolorAction.setStatusTip('FAKE color Bands')
+        self.FAKEcolorAction.setStatusTip('False color Bands')
         self.FAKEcolorAction.triggered.connect(self.FAKE) 
         self.FAKEcolorAction.setEnabled(False)
+
+        self.combo=QComboBox()
+        self.combo.setEnabled(False)
+
         #saveAction = QAction(QIcon('./icons/save.png'), 'Save', self)
         #saveAction.setShortcut('Ctrl+S')
         #saveAction.setStatusTip('Save')
@@ -80,37 +90,37 @@ class  MainWindow(QMainWindow):
         newAction.setShortcut('Ctrl+N')
         newAction.setStatusTip('New File')
 
-        self.zoominAction = QAction(QIcon('./icons/zoomin.png'), 'Zoom in',  self)
-        self.zoominAction.setShortcut('Ctrl++')
-        self.zoominAction.setStatusTip('Zoom in')
-        self.zoominAction.triggered.connect(self.zoomin) 
-        self.zoominAction.setEnabled(False)
+        #self.zoominAction = QAction(QIcon('./icons/zoomin.png'), 'Zoom in',  self)
+        #self.zoominAction.setShortcut('Ctrl++')
+        #self.zoominAction.setStatusTip('Zoom in')
+        #self.zoominAction.triggered.connect(self.zoomin) 
+        #self.zoominAction.setEnabled(False)
  
 
-        self.normAction = QAction(QIcon('./icons/norm.png'), 'Original Size',  self)
+        #self.normAction = QAction(QIcon('./icons/norm.png'), 'Original Size',  self)
         #self.normAction.setShortcut('Ctrl+N')
-        self.normAction.setStatusTip('Original Size')
-        self.normAction.setEnabled(False)
+        #self.normAction.setStatusTip('Original Size')
+        #self.normAction.setEnabled(False)
 
-        self.zoomoutAction = QAction(QIcon('./icons/zoomout.png'), 'Zoom out', self)
+        #self.zoomoutAction = QAction(QIcon('./icons/zoomout.png'), 'Zoom out', self)
         #self.zoomoutAction.setShortcut('Ctrl+-')
-        self.zoomoutAction.setStatusTip('./icons/Zoom out')
-        self.zoomoutAction.setEnabled(False)
+        #self.zoomoutAction.setStatusTip('./icons/Zoom out')
+        #self.zoomoutAction.setEnabled(False)
 
-        self.cursorAction = QAction(QIcon('./icons/cursor.png'), 'Cursor', self)
+        #self.cursorAction = QAction(QIcon('./icons/cursor.png'), 'Cursor', self)
         #self.cursorAction.setShortcut('Ctrl+N')
-        self.cursorAction.setStatusTip('Cursor')
-        self.cursorAction.setEnabled(False)
+        #self.cursorAction.setStatusTip('Cursor')
+        #self.cursorAction.setEnabled(False)
 
         self.gridAction = QAction(QIcon('./icons/grid.png'), 'Grid', self)
         self.gridAction.setShortcut('Ctrl+G')
         self.gridAction.setStatusTip('Grid')
         self.gridAction.setEnabled(False)
 
-        self.polylineAction = QAction(QIcon('./icons/polyline.png'), 'Draw Polyline', self)
-        self.polylineAction.setShortcut('Ctrl+D')
-        self.polylineAction.setStatusTip('Draw Polyline')
-        self.polylineAction.setEnabled(False)
+        self.rectangleAction = QAction(QIcon('./icons/rectangle.png'), 'Crop', self)
+        self.rectangleAction.setShortcut('Ctrl+D')
+        self.rectangleAction.setStatusTip('Crop')
+        self.rectangleAction.setEnabled(False)
 
         self.analyzeAction = QAction(QIcon('./icons/analyze.png'), 'Analyze', self)
         self.analyzeAction.setShortcut('Ctrl+A')
@@ -156,9 +166,9 @@ class  MainWindow(QMainWindow):
         fileMenu.addSeparator()
 
         EditMenu = menubar.addMenu('Edit')
-        EditMenu.addAction(self.zoominAction)
-        EditMenu.addAction(self.normAction)
-        EditMenu.addAction(self.zoomoutAction)
+        #EditMenu.addAction(self.zoominAction)
+        #EditMenu.addAction(self.normAction)
+        #EditMenu.addAction(self.zoomoutAction)
         EditMenu.addSeparator()
 
         fileMenu.addAction(exitAction)
@@ -184,17 +194,20 @@ class  MainWindow(QMainWindow):
         toolbar.addAction(newAction)
         toolbar.addAction(openAction)
         
-        toolbar1 = self.addToolBar('Tools')
-        toolbar1.addAction(self.zoominAction)
-        toolbar1.addAction(self.normAction)
-        toolbar1.addAction(self.zoomoutAction)
-        toolbar1.addAction(self.cursorAction)
-        toolbar1.addAction(self.FAKEcolorAction)
-        toolbar1.addAction(self.polylineAction)
-        toolbar1.addAction(self.gridAction)
-        toolbar1.addAction(self.filterinAction)
-        toolbar1.addAction(self.filterClearAction)
-        toolbar1.addAction(self.joinAction)
+        self.toolbar1 = self.addToolBar('Tools')
+        #toolbar1.addAction(self.zoominAction)
+        #toolbar1.addAction(self.normAction)
+        #toolbar1.addAction(self.zoomoutAction)
+        self.toolbar1.addWidget(self.combo)
+        
+        #toolbar1.addAction(self.cursorAction)
+        self.toolbar1.addAction(self.rectangleAction)
+        self.toolbar1.addAction(self.FAKEcolorAction)
+        
+        self.toolbar1.addAction(self.gridAction)
+        self.toolbar1.addAction(self.filterinAction)
+        self.toolbar1.addAction(self.filterClearAction)
+        self.toolbar1.addAction(self.joinAction)
 
         #icono 
         toolbar2 = self.addToolBar('Exit')
@@ -237,38 +250,89 @@ class  MainWindow(QMainWindow):
         img = open_image(fileName)  
         #nbands = img.shape
         nbands = len(img[1, 1])
-        #print (nbands)
-        #print(img.read_band(0))
-        #print (len(img.read_band(0)))
-        #imshow(img.read_band(0), title="image1", cmap='gray')
+
 
         rgb = get_rgb(img.read_band(0))
-        rgb2 = rgb*255
-        #print (rgb)
-        #print (len(rgb))
-        #print (rgb2)
-        #print (rgb2[0][0][0])
-
-        image = QtGui.QImage(len(rgb), len(rgb), 5)
-
-        for x in range(len(rgb2)):
-            for y in range(len(rgb2)):
-                onColor = QtGui.qRgb(rgb2[y][x][0], rgb2[y][x][0], rgb2[y][x][0])
-                image.setPixel(x, y, onColor)
-
-        #image.scaled(290, 290, Qt.KeepAspectRatio)
-        pp = QtGui.QPixmap.fromImage(image)
-        self.lbl = label
-        self.lbl.setPixmap(pp)
-
         
-        self.lbl.show()
-        self.zoominAction.setEnabled(True)
-        self.zoomoutAction.setEnabled(True)
-        self.normAction.setEnabled(True)
-        #pixmap = QPixmap("join.png")
-        #img = pixmap.toImage()
-        #self.label=label.setPixmap(pixmap)
+        #plt.imshow(rgb)
+        #plt.show()
+
+        self.main_frame = QWidget()
+        self.fig = Figure()
+        self.axes = self.fig.add_subplot(111)               
+        self.axes.axis((0,len(rgb),len(rgb),0))
+
+
+        self.canvas = FigureCanvas(self.fig)
+        self.canvas.setParent(self.main_frame)
+        self.mpl_toolbar = NavigationToolbar(self.canvas, self.main_frame)
+        
+        self.canvas.draw()
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.canvas)         # the matplotlib canvas
+
+        self.layout.addWidget(self.mpl_toolbar)
+        self.main_frame.setLayout(self.layout)
+        self.setCentralWidget(self.main_frame)
+        
+        #self.axes.plot(self.x, self.y, 'ro')
+        self.axes.imshow(rgb)
+        #self.axes.plot([1,2,3])
+        self.canvas.draw()
+
+
+
+        for i in range(nbands):
+            text="Band " + str(i)
+            self.combo.addItem(text)
+
+
+
+        #1DESDE AQUI 
+        #self.main_frame = QWidget()
+        #self.fig = Figure((5.0, 4.0), dpi=100)
+        #self.fig.add_subplot(111)
+        #self.canvas = FigureCanvas(self.fig)
+        #self.canvas.setParent(self.main_frame)
+        #self.mpl_toolbar = NavigationToolbar(self.canvas, self.main_frame)
+        
+
+        #vbox = QVBoxLayout()
+        #vbox.addWidget(self.canvas)         # the matplotlib canvas
+        #vbox.addWidget(self.mpl_toolbar)
+        #self.main_frame.setLayout(vbox)
+        #self.setCentralWidget(self.main_frame)
+        #HASTA AQUÍ AÑADE GRAFICA
+
+       
+
+
+        #2DESDE AQUÍ 
+        #image = QtGui.QImage(len(rgb), len(rgb), 5)
+
+        #for i in range(nbands):
+        #    text="Band " + str(i)
+        #    self.combo.addItem(text)
+
+        #for x in range(len(rgb2)):
+        #    for y in range(len(rgb2)):
+                
+        #        onColor = QtGui.qRgb(rgb2[y][x][0], rgb2[y][x][0], rgb2[y][x][0])
+        #        image.setPixel(x, y, onColor)
+        
+        
+        self.combo.activated[str].connect(self.comboChanged) 
+        #pp = QtGui.QPixmap.fromImage(image)
+        #self.lbl = label
+        #self.lbl.setPixmap(pp)
+        #self.zoominAction.setEnabled(True)
+        #self.zoomoutAction.setEnabled(True)
+        #self.normAction.setEnabled(True)
+        self.FAKEcolorAction.setEnabled(True)
+        self.combo.setEnabled(True)
+        self.rectangleAction.setEnabled(True)
+        #2HASTA AQUÍ FUNCIONA REPERESENTAR IMAGEN
+
 
     
 
@@ -279,7 +343,6 @@ class  MainWindow(QMainWindow):
 
 
         #view_indexed(img.read_band(0))
-
         #print (img.shape)
         #view = imshow(img, (29, 19, 9), title=fileName)
         #view.show()
@@ -289,7 +352,7 @@ class  MainWindow(QMainWindow):
         datos=str(img)
         self.textConsole.append(datos)
         self.listWidget.addItem(fileName)
-        self.FAKEcolorAction.setEnabled(True)
+        
         
 
         
@@ -349,6 +412,31 @@ class  MainWindow(QMainWindow):
        #self.dialog.show()
     def zoomin(self):
         print("holiiiii")
+
+
+
+    def comboChanged(self, text):
+        
+
+        rgb = get_rgb(img.read_band(int(text.strip("Band"))))
+        #self.canvas = FigureCanvas(self.fig)
+        #self.canvas.setParent(self.main_frame)
+        #self.mpl_toolbar = NavigationToolbar(self.canvas, self.main_frame)
+        #self.canvas.draw()
+        
+        self.layout.addWidget(self.canvas)         # the matplotlib canvas
+        self.layout.addWidget(self.mpl_toolbar)
+        self.main_frame.setLayout(self.layout)
+        self.setCentralWidget(self.main_frame)
+        
+        #self.axes.plot(self.x, self.y, 'ro')
+        ax=self.axes.imshow(rgb)
+        #self.axes.plot([1,2,3])
+
+        self.canvas.draw()
+        self.textConsole.append(text + " loaded.")
+
+
         
         
 class FAKEcolorWindow(QMainWindow):
@@ -367,18 +455,20 @@ class FAKEcolorWindow(QMainWindow):
         global nbands
         self.nbands = nbands-1
 
-        cb = QCheckBox('Red', self)
-        cb.move(20, 20)
-        cb.toggle()
-        cb.stateChanged.connect(self.on)
-        cb1 = QCheckBox('Blue', self)
-        cb1.move(20, 40)
-        cb1.toggle()
-        cb1.stateChanged.connect(self.on1)
-        cb2 = QCheckBox('Green', self)
-        cb2.move(20, 60)
-        cb2.toggle()
-        cb2.stateChanged.connect(self.on2)
+
+
+
+        self.lbl = QLabel(self)
+        self.lbl.move(20, 20)
+        self.lbl.setText("Red")
+
+        self.lbl1 = QLabel(self)
+        self.lbl1.move(20, 40)
+        self.lbl1.setText("Blue")
+
+        self.lbl2 = QLabel(self)
+        self.lbl2.move(20, 60)
+        self.lbl2.setText("Green")
 
         self.sld = QSlider(Qt.Horizontal, self)
         self.sld.setFocusPolicy(Qt.NoFocus)
@@ -422,30 +512,13 @@ class FAKEcolorWindow(QMainWindow):
 
         
         #self.le.adjustSize()
-        self.setWindowTitle('FAKE color Bands Selector')
+        self.setWindowTitle('False color Bands Selector')
+        self.setWindowIcon(QIcon('rgb.png')) 
         self.setFixedSize(400, 150)
         self.setWindowFlags(QtCore.Qt.Window |QtCore.Qt.CustomizeWindowHint |QtCore.Qt.WindowTitleHint |QtCore.Qt.WindowCloseButtonHint |QtCore.Qt.WindowStaysOnTopHint)
         self.show()
 
-    def on(self, state):
-      
-        if state == Qt.Checked:
-            self.sld.setEnabled(True)
-        else:
-            self.sld.setEnabled(False)
 
-    def on1(self, state):
-      
-        if state == Qt.Checked:
-            self.sld1.setEnabled(True)
-        else:
-            self.sld1.setEnabled(False)
-    def on2(self, state):
-      
-        if state == Qt.Checked:
-            self.sld2.setEnabled(True)
-        else:
-            self.sld2.setEnabled(False)
 
     def valuechange(self):
         size = self.sld.value()
@@ -462,7 +535,7 @@ class FAKEcolorWindow(QMainWindow):
         print("RGBimage")
         global img
         self.img=img
-        imshow(img, (self.sld.value(), self.sld1.value(), self.sld2.value()), title="image1")
+        imshow(img, (self.sld.value(), self.sld1.value(), self.sld2.value()), title="False color image")
         self.close
     def itmSelected(self):
         print ("holiiiiii")
